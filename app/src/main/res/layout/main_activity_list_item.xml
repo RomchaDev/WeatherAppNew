@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="70dp"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/container_color">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="00:00"
+        android:id='@+id/list_text_top'
+        android:gravity="center"/>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:src='@drawable/weather_sunny'
+        android:id='@+id/list_image'/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text='0 C'
+        android:id="@+id/list_text_bottom"
+        android:gravity="center"/>
+
+</LinearLayout>
