@@ -2,4 +2,6 @@
     <string name="app_name">WeatherAppNew</string>
     <string name="know_more">Know more about city</string>
     <string name="city">City</string>
+    <string name="speed_unit"> m/s</string>
+    <string name="temperatureUnit">°C</string>
 </resources>
