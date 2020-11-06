@@ -15,9 +15,9 @@
 
     <ImageView
         android:layout_width="match_parent"
-        android:layout_height="30dp"
+        android:layout_height="50dp"
         android:src='@drawable/weather_sunny'
-        android:id='@+id/list_image'/>
+        android:id='@+id/main_list_image'/>
 
     <TextView
         android:layout_width="match_parent"

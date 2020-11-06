@@ -1,4 +1,4 @@
-package com.romeo.weatherappnew.JSON.forecast;
+package com.romeo.weatherappnew.JSON;
 
 public class Temp {
     private double eve;

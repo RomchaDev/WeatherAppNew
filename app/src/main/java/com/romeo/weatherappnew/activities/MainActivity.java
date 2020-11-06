@@ -1,4 +1,4 @@
-package com.romeo.weatherappnew;
+package com.romeo.weatherappnew.activities;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,15 +9,24 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.SlidingDrawer;
 import android.widget.TextView;
 
-import com.romeo.weatherappnew.JSON.AbstractAnswer;
-import com.romeo.weatherappnew.JSON.CurrentWeatherAnswer;
+import com.mikepenz.materialdrawer.Drawer;
+import com.mikepenz.materialdrawer.accountswitcher.AccountHeader;
+import com.mikepenz.materialdrawer.model.PrimaryDrawerItem;
+import com.mikepenz.materialdrawer.model.interfaces.IDrawerItem;
+import com.romeo.weatherappnew.CitiesWeatherHistoryActivity;
+import com.romeo.weatherappnew.recycler_adapters.DaysAdapter;
+import com.romeo.weatherappnew.recycler_adapters.HoursAdapter;
 import com.romeo.weatherappnew.JSON.MainJSONWorker;
-import com.romeo.weatherappnew.JSON.forecast.DailyForecastAnswer;
-import com.romeo.weatherappnew.JSON.forecast.ForecastAnswer;
-import com.romeo.weatherappnew.JSON.forecast.HourlyForecastAnswer;
+import com.romeo.weatherappnew.JSON.UniversalForecastAnswer;
+import com.romeo.weatherappnew.R;
+import com.squareup.picasso.Picasso;
 
 import java.text.DateFormat;
 import java.util.Calendar;
@@ -27,29 +36,20 @@ public class MainActivity extends AppCompatActivity {
     public static final String CITY_NAME = "CITY_NAME";
 
     private static MainActivity instance;
-
     private RecyclerView hoursList;
-
     private RecyclerView daysList;
-
     private DaysAdapter daysAdapter;
-
     private HoursAdapter hoursAdapter;
-
     private Button cityButton;
-
     private Button knowMoreButton;
-
     private TextView mainTime;
-
     private TextView mainDate;
-
     private static final int CITY_REQUEST = 101;
-
     private TextView mainTemp;
-
     private TextView mainWindSpeed;
-
+    private TextView mainDescription;
+    private ImageView mainWeatherIcon;
+    public static final String IMAGE_URI = "https://openweathermap.org/img/wn/%s@4x.png";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,9 +79,7 @@ public class MainActivity extends AppCompatActivity {
         hoursAdapter.resetCurrentHour();
         daysAdapter.resetCurrentDay();
 
-        MainJSONWorker.getInstance().getCurrentWeather((String) cityButton.getText());
-        MainJSONWorker.getInstance().getDailyForecast((String) cityButton.getText());
-        MainJSONWorker.getInstance().getHourlyForecast((String) cityButton.getText());
+        MainJSONWorker.getInstance().getUniversalForecast((String) cityButton.getText());
 
         while (true) {
             Calendar calendar = Calendar.getInstance();
@@ -102,9 +100,7 @@ public class MainActivity extends AppCompatActivity {
                 currentHour = calendar.get(Calendar.HOUR_OF_DAY);
                 hoursAdapter.resetCurrentHour();
                 String city = (String) cityButton.getText();
-                MainJSONWorker.getInstance().getCurrentWeather(city);
-                MainJSONWorker.getInstance().getDailyForecast(city);
-                MainJSONWorker.getInstance().getHourlyForecast(city);
+                MainJSONWorker.getInstance().getUniversalForecast(city);
             }
 
             if (calendar.get(Calendar.DAY_OF_WEEK) != currentDay) {
@@ -134,6 +130,8 @@ public class MainActivity extends AppCompatActivity {
         mainTime = findViewById(R.id.main_time);
         mainTemp = findViewById(R.id.mainTemp);
         mainWindSpeed = findViewById(R.id.mainWindSpeed);
+        mainDescription = findViewById(R.id.mainDescription);
+        mainWeatherIcon = findViewById(R.id.mainWeatherIcon);
     }
 
     private void setActionListeners() {
@@ -150,6 +148,25 @@ public class MainActivity extends AppCompatActivity {
         initHoursList();
 
         initDaysList();
+
+        Drawer.Result drawerResult = new Drawer()
+                .withActivity(this)
+                .addDrawerItems(formDrawerItems())
+                .withAccountHeader(new AccountHeader().withActivity(this).withHeaderBackground(R.drawable.main_background).build())
+                .withOnDrawerItemClickListener(new Drawer.OnDrawerItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id, IDrawerItem drawerItem) {
+                        startActivityForResult(new Intent(MainActivity.this, CitiesWeatherHistoryActivity.class),
+                                CITY_REQUEST);
+                    }
+                })
+                .build();
+    }
+
+    private PrimaryDrawerItem formDrawerItems() {
+        return new PrimaryDrawerItem()
+                .withIcon(R.drawable.weather_sunny)
+                .withDescription("Recent cities...");
     }
 
     private void initDaysList() {
@@ -188,9 +205,7 @@ public class MainActivity extends AppCompatActivity {
             String newCity = data.getStringExtra(CITY_NAME);
             cityButton.setText(newCity);
             replaceCityOnKnowMoreButtonTo(newCity);
-            MainJSONWorker.getInstance().getCurrentWeather(newCity);
-            MainJSONWorker.getInstance().getDailyForecast(newCity);
-            MainJSONWorker.getInstance().getHourlyForecast(newCity);
+            MainJSONWorker.getInstance().getUniversalForecast(newCity);
         }
     }
 
@@ -198,22 +213,22 @@ public class MainActivity extends AppCompatActivity {
         return instance;
     }
 
-    public void notifyAboutWeatherChanges(AbstractAnswer ans) {
-        if (ans instanceof CurrentWeatherAnswer)
-            runOnUiThread(() -> {
-                long temp = Math.round(((CurrentWeatherAnswer) ans).getMain().getTemp() - 273);
+    public void notifyAboutWeatherChanges(UniversalForecastAnswer ans) {
+        changeWeather(ans);
+    }
 
-                String tempStr = temp + getString(R.string.temperatureUnit);
-                String windStr = ((CurrentWeatherAnswer) ans).getWind().getSpeed() + " m/s";
+    private void changeWeather(UniversalForecastAnswer ans) {
+        String temp = ans.getCurrentTemp() + getString(R.string.temperature_unit);
+        String wind = ans.getCurrentWindSpeed() + " " + getString(R.string.wind_speed_unit);
 
-                mainTemp.setText(tempStr);
-                mainWindSpeed.setText(windStr);
-            });
-        else if (ans instanceof DailyForecastAnswer) {
-            DailyForecastAnswer forecastAnswer = (DailyForecastAnswer) ans;
-            runOnUiThread(() -> DaysAdapter.getInstance().resetTemp(forecastAnswer));
-        }
-        else if (ans instanceof HourlyForecastAnswer)
-            runOnUiThread(() -> HoursAdapter.getInstance().resetForecast((HourlyForecastAnswer) ans));
+        runOnUiThread(() -> {
+            mainWindSpeed.setText(wind);
+            mainTemp.setText(temp);
+            mainDescription.setText(ans.getCurrentWeather().getDescription());
+            Picasso.get().load(String.format(IMAGE_URI, ans.getCurrentWeather().getIcon())).into(mainWeatherIcon);
+
+            daysAdapter.resetForecastUniversal(ans);
+            hoursAdapter.resetForecastUniversal(ans);
+        });
     }
 }

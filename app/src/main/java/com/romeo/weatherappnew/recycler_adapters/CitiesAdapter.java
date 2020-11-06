@@ -1,4 +1,4 @@
-package com.romeo.weatherappnew;
+package com.romeo.weatherappnew.recycler_adapters;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -8,6 +8,9 @@ import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.romeo.weatherappnew.R;
+import com.romeo.weatherappnew.activities.CitiesActivity;
 
 public class CitiesAdapter extends RecyclerView.Adapter<CitiesAdapter.CityHolder> {
 

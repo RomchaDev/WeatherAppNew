@@ -1,4 +1,4 @@
-package com.romeo.weatherappnew;
+package com.romeo.weatherappnew.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -7,6 +7,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.romeo.weatherappnew.CityWeatherContainer;
+import com.romeo.weatherappnew.recycler_adapters.CitiesAdapter;
+import com.romeo.weatherappnew.R;
 
 public class CitiesActivity extends AppCompatActivity {
     private static CitiesActivity instance;
@@ -27,6 +31,8 @@ public class CitiesActivity extends AppCompatActivity {
     }
 
     public void chooseCity(String city) {
+        CityWeatherContainer.getInstance().addCity(city);
+
         Intent resultIntent = new Intent();
 
         resultIntent.putExtra(MainActivity.CITY_NAME, city);
