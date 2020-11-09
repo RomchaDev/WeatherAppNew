@@ -1,5 +1,8 @@
 package com.romeo.weatherappnew.JSON;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+
 import com.google.gson.Gson;
 import com.romeo.weatherappnew.BuildConfig;
 import com.romeo.weatherappnew.JSON.coordinates.Coordinates;
@@ -70,7 +73,9 @@ public class MainJSONWorker {
 
                 MainActivity.getInstance().notifyAboutWeatherChanges(answer);
             } catch (IOException e) {
-                e.printStackTrace();
+                showDialog("Server error", "Sorry, problems with server! What do you want to do now?", city);
+            } catch (NullPointerException e) {
+                showDialog("Connection error", "A problem with your internet connection! What do you want to do now?", city);
             } finally {
                 if (conn != null)
                     conn.disconnect();
@@ -80,6 +85,20 @@ public class MainJSONWorker {
         thread.setDaemon(true);
 
         thread.start();
+    }
+
+    private void showDialog(String title, String message, String city) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.getInstance());
+
+        MainActivity.getInstance().runOnUiThread(() -> {
+            builder.setTitle(title)
+                    .setMessage(message)
+                    .setPositiveButton("Retry", (dialog, which) -> getUniversalForecast(city))
+                    .setNegativeButton("Exit", ((dialog, which) -> System.exit(0)))
+                    .setOnCancelListener(dialog -> getUniversalForecast(city))
+                    .show();
+        });
+
     }
     
     /*
