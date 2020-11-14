@@ -2,11 +2,15 @@ package com.romeo.weatherappnew.JSON;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.util.Log;
+
+import androidx.annotation.LongDef;
 
 import com.google.gson.Gson;
 import com.romeo.weatherappnew.BuildConfig;
 import com.romeo.weatherappnew.JSON.coordinates.Coordinates;
 import com.romeo.weatherappnew.JSON.coordinates.CoordinatesAnswer;
+import com.romeo.weatherappnew.WeatherGetterService;
 import com.romeo.weatherappnew.activities.MainActivity;
 
 import java.io.IOException;
@@ -16,9 +20,14 @@ import java.net.URL;
 import javax.net.ssl.HttpsURLConnection;
 
 public class MainJSONWorker {
+
+    private boolean isNotifyRequired = false;
+
     private static final String CURRENT_WEATHER_STR = "https://api.openweathermap.org/data/2.5/weather?q=%s%s%s";
 
     private static final MainJSONWorker instance = new MainJSONWorker();
+
+    private String json;
 
     private MainJSONWorker() {
     }
@@ -36,15 +45,16 @@ public class MainJSONWorker {
 
             URL coordinatesUrl = new URL(coordinatesUri);
 
-            coordinatesConn = (HttpsURLConnection) coordinatesUrl.openConnection();
+            WeatherGetterService.startWeatherGetter(MainActivity.getInstance(), coordinatesUrl);
 
-            InputStreamReader coordinatesReader = new InputStreamReader(coordinatesConn.getInputStream());
+            isNotifyRequired = true;
 
-            CoordinatesAnswer coordinatesAnswer = new Gson().fromJson(coordinatesReader, CoordinatesAnswer.class);
+            while (isNotifyRequired) ;
 
-            coordinatesReader.close();
+            CoordinatesAnswer coordinatesAnswer = new Gson().fromJson(json, CoordinatesAnswer.class);
 
             return coordinatesAnswer.getCoordinates();
+
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -56,49 +66,50 @@ public class MainJSONWorker {
     }
 
     public void getUniversalForecast(String city) {
-        Thread thread = new Thread(() -> {
-            HttpsURLConnection conn = null;
+        Log.d("DONE", "getUniversalForecast: done");
 
-            try {
-                Coordinates coordinates = getCoordinates(city);
-                String coordinatesUri = String.format(UniversalForecastAnswer.URI, coordinates.getLat(), coordinates.getLon());
-                URL url = new URL(coordinatesUri);
+        try {
+            Coordinates coordinates = getCoordinates(city);
+            String coordinatesUri = String.format(UniversalForecastAnswer.URI, coordinates.getLat(), coordinates.getLon());
+            URL url = new URL(coordinatesUri);
 
-                conn = (HttpsURLConnection) url.openConnection();
+            WeatherGetterService.startWeatherGetter(MainActivity.getInstance(), url);
 
-                Gson gson = new Gson();
-                InputStreamReader reader = new InputStreamReader(conn.getInputStream());
+            isNotifyRequired = true;
 
-                UniversalForecastAnswer answer = gson.fromJson(reader, UniversalForecastAnswer.class);
+            while (isNotifyRequired) ;
 
-                MainActivity.getInstance().notifyAboutWeatherChanges(answer);
-            } catch (IOException e) {
-                showDialog("Server error", "Sorry, problems with server! What do you want to do now?", city);
-            } catch (NullPointerException e) {
-                showDialog("Connection error", "A problem with your internet connection! What do you want to do now?", city);
-            } finally {
-                if (conn != null)
-                    conn.disconnect();
-            }
-        });
 
-        thread.setDaemon(true);
 
-        thread.start();
+            Gson gson = new Gson();
+
+            UniversalForecastAnswer answer = gson.fromJson(json, UniversalForecastAnswer.class);
+
+            MainActivity.getInstance().notifyAboutWeatherChanges(answer);
+        } catch (IOException e) {
+            showDialog("Server error", "Sorry, problems with server! What do you want to do now?", city);
+        } catch (NullPointerException e) {
+            showDialog("Connection error", "A problem with your internet connection! What do you want to do now?", city);
+        }
     }
 
     private void showDialog(String title, String message, String city) {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.getInstance());
 
-        MainActivity.getInstance().runOnUiThread(() -> {
-            builder.setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton("Retry", (dialog, which) -> getUniversalForecast(city))
-                    .setNegativeButton("Exit", ((dialog, which) -> System.exit(0)))
-                    .setOnCancelListener(dialog -> getUniversalForecast(city))
-                    .show();
-        });
+        MainActivity.getInstance().runOnUiThread(() ->
+                builder.setTitle(title)
+                        .setMessage(message)
+                        .setPositiveButton("Retry", (dialog, which) -> getUniversalForecast(city))
+                        .setNegativeButton("Exit", ((dialog, which) -> System.exit(0)))
+                        .setOnCancelListener(dialog -> getUniversalForecast(city))
+                        .show());
 
+    }
+
+    public synchronized void notifyAboutJSON(String json) {
+        this.json = json;
+
+        isNotifyRequired = false;
     }
     
     /*
