@@ -1,107 +1,125 @@
 package com.romeo.weatherappnew.JSON;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.os.Handler;
+import android.os.HandlerThread;
 
-import com.google.gson.Gson;
 import com.romeo.weatherappnew.BuildConfig;
 import com.romeo.weatherappnew.JSON.coordinates.Coordinates;
 import com.romeo.weatherappnew.JSON.coordinates.CoordinatesAnswer;
+import com.romeo.weatherappnew.LinkMaker;
 import com.romeo.weatherappnew.activities.MainActivity;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainJSONWorker {
-    private static final String CURRENT_WEATHER_STR = "https://api.openweathermap.org/data/2.5/weather?q=%s%s%s";
+
+    private final Handler coordinatesHandler;
+
+    private final Object monitor = new Object();
+
+    private static final String BASE_URL = "https://api.openweathermap.org/";
+
+    private Coordinates coordinates;
+
+    private final Retrofit retrofit = new Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build();
+
+    private final LinkMaker linkMaker = retrofit.create(LinkMaker.class);
 
     private static final MainJSONWorker instance = new MainJSONWorker();
 
     private MainJSONWorker() {
+        HandlerThread coordinatesHandlerThread = new HandlerThread("coordinatesHandlerThread");
+        coordinatesHandlerThread.start();
+        coordinatesHandler = new Handler(coordinatesHandlerThread.getLooper());
     }
 
     public static MainJSONWorker getInstance() {
         return instance;
     }
 
-    private Coordinates getCoordinates(String city) {
-        HttpsURLConnection coordinatesConn = null;
+    private void getCoordinates(String city) throws IOException {
+        Map<String, String> args = new HashMap<>();
 
-        try {
+        args.put("q", city);
 
-            String coordinatesUri = String.format(CURRENT_WEATHER_STR, city, "&appid=", BuildConfig.WEATHER_API_KEY);
+        args.put("appid", BuildConfig.WEATHER_API_KEY);
 
-            URL coordinatesUrl = new URL(coordinatesUri);
+        Response<CoordinatesAnswer> response = linkMaker.getCoordinatesAnswer(args).execute();
 
-            coordinatesConn = (HttpsURLConnection) coordinatesUrl.openConnection();
+        setCoordinates(response.body().getCoordinates());
+    }
 
-            InputStreamReader coordinatesReader = new InputStreamReader(coordinatesConn.getInputStream());
-
-            CoordinatesAnswer coordinatesAnswer = new Gson().fromJson(coordinatesReader, CoordinatesAnswer.class);
-
-            coordinatesReader.close();
-
-            return coordinatesAnswer.getCoordinates();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (coordinatesConn != null)
-                coordinatesConn.disconnect();
-        }
-
-        return null;
+    private void setCoordinates(Coordinates coordinates) {
+        this.coordinates = coordinates;
     }
 
     public void getUniversalForecast(String city) {
-        Thread thread = new Thread(() -> {
-            HttpsURLConnection conn = null;
 
+        coordinatesHandler.post(() -> {
             try {
-                Coordinates coordinates = getCoordinates(city);
-                String coordinatesUri = String.format(UniversalForecastAnswer.URI, coordinates.getLat(), coordinates.getLon());
-                URL url = new URL(coordinatesUri);
+                getCoordinates(city);
 
-                conn = (HttpsURLConnection) url.openConnection();
+                synchronized (monitor) {
+                    monitor.notify();
+                }
 
-                Gson gson = new Gson();
-                InputStreamReader reader = new InputStreamReader(conn.getInputStream());
-
-                UniversalForecastAnswer answer = gson.fromJson(reader, UniversalForecastAnswer.class);
-
-                MainActivity.getInstance().notifyAboutWeatherChanges(answer);
             } catch (IOException e) {
-                showDialog("Server error", "Sorry, problems with server! What do you want to do now?", city);
-            } catch (NullPointerException e) {
-                showDialog("Connection error", "A problem with your internet connection! What do you want to do now?", city);
-            } finally {
-                if (conn != null)
-                    conn.disconnect();
+                e.printStackTrace();
             }
         });
 
-        thread.setDaemon(true);
+        synchronized (monitor) {
+            try {
+                monitor.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
-        thread.start();
+        if (coordinates == null) {
+            showDialog("Network problems", "check your internet connection", city);
+            return;
+        }
+
+        Map<String, String> map = new HashMap<>();
+        map.put("lat", String.valueOf(coordinates.getLat()));
+        map.put("lon", String.valueOf(coordinates.getLon()));
+        map.put("appid", BuildConfig.WEATHER_API_KEY);
+
+        linkMaker.getUniversalAnswer(map).enqueue(new Callback<UniversalForecastAnswer>() {
+            @Override
+            public void onResponse(Call<UniversalForecastAnswer> call, Response<UniversalForecastAnswer> response) {
+                MainActivity.getInstance().notifyAboutWeatherChanges(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<UniversalForecastAnswer> call, Throwable t) {
+                showDialog("Network problems", "check your internet connection", city);
+            }
+        });
     }
 
     private void showDialog(String title, String message, String city) {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.getInstance());
 
-        MainActivity.getInstance().runOnUiThread(() -> {
-            builder.setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton("Retry", (dialog, which) -> getUniversalForecast(city))
-                    .setNegativeButton("Exit", ((dialog, which) -> System.exit(0)))
-                    .setOnCancelListener(dialog -> getUniversalForecast(city))
-                    .show();
-        });
-
+        MainActivity.getInstance().runOnUiThread(() ->
+                builder.setTitle(title)
+                        .setMessage(message)
+                        .setPositiveButton("Retry", (dialog, which) -> getUniversalForecast(city))
+                        .setNegativeButton("Exit", ((dialog, which) -> System.exit(0)))
+                        .setOnCancelListener(dialog -> getUniversalForecast(city))
+                        .show());
     }
-    
-    /*
-     "https://api.openweathermap.org/data/2.5/onecall?" +
-             "lat=%d&lon=%d&exclude=daily,current,alerts,minutely&appid=%s"*/
 }
