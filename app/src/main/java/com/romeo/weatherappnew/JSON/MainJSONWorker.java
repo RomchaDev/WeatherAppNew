@@ -61,6 +61,25 @@ public class MainJSONWorker {
         setCoordinates(response.body().getCoordinates());
     }
 
+    public void getUniversalForecast(double lat, double lon) {
+        Map<String, String> map = new HashMap<>();
+        map.put("lat", String.valueOf(lat));
+        map.put("lon", String.valueOf(lon));
+        map.put("appid", BuildConfig.WEATHER_API_KEY);
+
+        linkMaker.getUniversalAnswer(map).enqueue(new Callback<UniversalForecastAnswer>() {
+            @Override
+            public void onResponse(Call<UniversalForecastAnswer> call, Response<UniversalForecastAnswer> response) {
+                MainActivity.getInstance().notifyAboutWeatherChanges(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<UniversalForecastAnswer> call, Throwable t) {
+                showDialog("Network problems", "check your internet connection", null);
+            }
+        });
+    }
+
     private void setCoordinates(Coordinates coordinates) {
         this.coordinates = coordinates;
     }
@@ -117,7 +136,10 @@ public class MainJSONWorker {
         MainActivity.getInstance().runOnUiThread(() ->
                 builder.setTitle(title)
                         .setMessage(message)
-                        .setPositiveButton("Retry", (dialog, which) -> getUniversalForecast(city))
+                        .setPositiveButton("Retry", (dialog, which) -> {
+                            if (city != null)
+                                getUniversalForecast(city);
+                        })
                         .setNegativeButton("Exit", ((dialog, which) -> System.exit(0)))
                         .setOnCancelListener(dialog -> getUniversalForecast(city))
                         .show());

@@ -6,4 +6,5 @@
     <string name="temperature_unit">°C</string>
     <string name="wind_speed_unit">m/s</string>
     <string name="search_title">Search</string>
+    <string name="title_activity_cities_new">Map</string>
 </resources>
