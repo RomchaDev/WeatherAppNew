@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String CITY_NAME = "CITY_NAME";
     private final String DEBUG_TAG = "DEBUG_TAG";
     public static boolean turnedAutoGeolocationOn = true;
+    private Criteria criteria;
     private LatLng currentCoordinates;
     private static MainActivity instance;
     public static final int GEO_PERMISSION_REQUEST_CODE = 5;
@@ -108,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
     private void requestLocation() {
         Log.d(DEBUG_TAG, "requestLocation: requesting");
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        Criteria criteria = new Criteria();
+        criteria = new Criteria();
         criteria.setAccuracy(Criteria.ACCURACY_COARSE);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
@@ -261,7 +262,8 @@ public class MainActivity extends AppCompatActivity {
             String newCity = data.getStringExtra(CITY_NAME);
             cityButton.setText(newCity);
             replaceCityOnKnowMoreButtonTo(newCity);
-            MainJSONWorker.getInstance().getUniversalForecast(newCity);
+            if (newCity != null)
+                MainJSONWorker.getInstance().getUniversalForecast(newCity);
         }
     }
 
@@ -298,6 +300,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public LatLng getCurrentCoordinates() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestGeoPermissions();
+            return getCurrentCoordinates();
+        }
+
+        Location location = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, true));
+
+        currentCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
+
         return currentCoordinates;
     }
 }

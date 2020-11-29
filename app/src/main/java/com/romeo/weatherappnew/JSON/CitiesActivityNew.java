@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.SearchView;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -38,19 +39,29 @@ public class CitiesActivityNew extends FragmentActivity implements OnMapReadyCal
 
         SearchView searchView = findViewById(R.id.search_for_city_text);
 
-        searchView.setOnSearchClickListener(v -> {
-            city = (String) searchView.getQuery();
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                city = query;
 
-            Geocoder geocoder = new Geocoder(this);
+                Geocoder geocoder = new Geocoder(CitiesActivityNew.this);
 
-            try {
-                List<Address> list = geocoder.getFromLocationName(city, 1);
+                try {
+                    List<Address> list = geocoder.getFromLocationName(city, 1);
 
-                LatLng coordinates = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
+                    LatLng coordinates = new LatLng(list.get(0).getLatitude(), list.get(0).getLongitude());
 
-                updateMap(coordinates, city);
-            } catch (IOException e) {
-                e.printStackTrace();
+                    updateMap(coordinates, city);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
             }
         });
     }
@@ -64,8 +75,9 @@ public class CitiesActivityNew extends FragmentActivity implements OnMapReadyCal
     }
 
     private void updateMap(LatLng coordinates, String place) {
+        mMap.clear();
         mMap.addMarker(new MarkerOptions().position(coordinates).title(place));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(coordinates));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinates, 12));
     }
 
     @Override

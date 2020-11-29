@@ -49,5 +49,4 @@
         <activity android:name=".activities.CitiesActivity" />
     </application>
 
-
 </manifest>

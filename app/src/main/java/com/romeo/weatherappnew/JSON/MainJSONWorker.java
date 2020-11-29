@@ -94,7 +94,7 @@ public class MainJSONWorker {
                     monitor.notify();
                 }
 
-            } catch (IOException e) {
+            } catch (IOException | NullPointerException e) {
                 e.printStackTrace();
             }
         });
