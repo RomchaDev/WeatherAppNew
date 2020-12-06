@@ -13,27 +13,19 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.CancellationSignal;
 import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.SlidingDrawer;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.mikepenz.materialdrawer.Drawer;
 import com.mikepenz.materialdrawer.accountswitcher.AccountHeader;
 import com.mikepenz.materialdrawer.model.PrimaryDrawerItem;
-import com.mikepenz.materialdrawer.model.interfaces.IDrawerItem;
 import com.romeo.weatherappnew.CitiesWeatherHistoryActivity;
-import com.romeo.weatherappnew.JSON.CitiesActivityNew;
-import com.romeo.weatherappnew.JSON.coordinates.Coordinates;
 import com.romeo.weatherappnew.recycler_adapters.DaysAdapter;
 import com.romeo.weatherappnew.recycler_adapters.HoursAdapter;
 import com.romeo.weatherappnew.JSON.MainJSONWorker;
@@ -43,7 +35,7 @@ import com.squareup.picasso.Picasso;
 
 import java.text.DateFormat;
 import java.util.Calendar;
-import java.util.concurrent.Executor;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -52,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
     private final String DEBUG_TAG = "DEBUG_TAG";
     public static boolean turnedAutoGeolocationOn = true;
     private Criteria criteria;
-    private LatLng currentCoordinates;
     private static MainActivity instance;
     public static final int GEO_PERMISSION_REQUEST_CODE = 5;
     private RecyclerView hoursList;
@@ -118,19 +109,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d(DEBUG_TAG, locationManager.getBestProvider(criteria, true));
-        locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, true), 0, 0, new LocationListener() {
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-                Log.d(DEBUG_TAG, "requestLocation: location changed");
-                if (turnedAutoGeolocationOn) {
-                    currentCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
-                    MainJSONWorker.getInstance().getUniversalForecast(location.getLatitude(), location.getLongitude());
-                } else {
-                    currentCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
-                }
-            }
-
-
+        locationManager.requestLocationUpdates(locationManager.getBestProvider(criteria, false), 0, 0, location -> {
+            Log.d(DEBUG_TAG, "requestLocation: location changed");
         });
     }
 
@@ -197,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setActionListeners() {
-        cityButton.setOnClickListener(v -> startActivityForResult(new Intent(this, CitiesActivityNew.class), CITY_REQUEST));
+        cityButton.setOnClickListener(v -> startActivityForResult(new Intent(this, CitiesActivity.class), CITY_REQUEST));
 
         knowMoreButton.setOnClickListener(v -> {
             Uri uri = Uri.parse("https://en.wikipedia.org/wiki/" + cityButton.getText());
@@ -215,7 +195,8 @@ public class MainActivity extends AppCompatActivity {
                 .withActivity(this)
                 .addDrawerItems(formDrawerItems())
                 .withAccountHeader(new AccountHeader().withActivity(this).withHeaderBackground(R.drawable.main_background).build())
-                .withOnDrawerItemClickListener((parent, view, position, id, drawerItem) -> startActivityForResult(new Intent(MainActivity.this, CitiesWeatherHistoryActivity.class),
+                .withOnDrawerItemClickListener((parent, view, position, id, drawerItem) -> startActivityForResult(
+                        new Intent(MainActivity.this, CitiesWeatherHistoryActivity.class),
                         CITY_REQUEST))
                 .build();
     }
@@ -260,10 +241,11 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == CITY_REQUEST && resultCode == RESULT_OK) {
             assert data != null;
             String newCity = data.getStringExtra(CITY_NAME);
-            cityButton.setText(newCity);
-            replaceCityOnKnowMoreButtonTo(newCity);
-            if (newCity != null)
+            if (newCity != null) {
+                cityButton.setText(newCity);
+                replaceCityOnKnowMoreButtonTo(newCity);
                 MainJSONWorker.getInstance().getUniversalForecast(newCity);
+            }
         }
     }
 
@@ -300,15 +282,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public LatLng getCurrentCoordinates() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
             requestGeoPermissions();
             return getCurrentCoordinates();
         }
 
-        Location location = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, true));
+        LocationManager mLocationManager = (LocationManager)getApplicationContext().getSystemService(LOCATION_SERVICE);
+        List<String> providers = mLocationManager.getProviders(true);
+        Location bestLocation = null;
+        for (String provider : providers) {
+            Location l = mLocationManager.getLastKnownLocation(provider);
+            if (l == null) {
+                continue;
+            }
+            if (bestLocation == null || l.getAccuracy() < bestLocation.getAccuracy()) {
+                bestLocation = l;
+            }
+        }
 
-        currentCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
-
-        return currentCoordinates;
+        return new LatLng(bestLocation.getLatitude(), bestLocation.getLongitude());
     }
 }

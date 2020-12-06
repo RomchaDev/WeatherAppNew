@@ -1,15 +1,13 @@
-package com.romeo.weatherappnew.JSON;
-
-import androidx.fragment.app.FragmentActivity;
+package com.romeo.weatherappnew.activities;
 
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.SearchView;
 
-import com.google.android.gms.maps.CameraUpdate;
+import androidx.fragment.app.FragmentActivity;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -18,12 +16,11 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.romeo.weatherappnew.CityWeatherContainer;
 import com.romeo.weatherappnew.R;
-import com.romeo.weatherappnew.activities.MainActivity;
 
 import java.io.IOException;
 import java.util.List;
 
-public class CitiesActivityNew extends FragmentActivity implements OnMapReadyCallback {
+public class CitiesActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private String city;
@@ -44,7 +41,7 @@ public class CitiesActivityNew extends FragmentActivity implements OnMapReadyCal
             public boolean onQueryTextSubmit(String query) {
                 city = query;
 
-                Geocoder geocoder = new Geocoder(CitiesActivityNew.this);
+                Geocoder geocoder = new Geocoder(CitiesActivity.this);
 
                 try {
                     List<Address> list = geocoder.getFromLocationName(city, 1);
