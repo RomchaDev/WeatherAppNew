@@ -9,8 +9,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.romeo.weatherappnew.CityWeatherContainer;
-import com.romeo.weatherappnew.recycler_adapters.CitiesAdapter;
 import com.romeo.weatherappnew.R;
+import com.romeo.weatherappnew.recycler_adapters.CitiesAdapter;
 
 public class CitiesActivity extends AppCompatActivity {
     private static CitiesActivity instance;

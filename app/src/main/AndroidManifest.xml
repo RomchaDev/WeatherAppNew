@@ -32,9 +32,6 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".JSON.CitiesActivityNew"
-            android:label="@string/title_activity_cities_new" />
-        <activity
             android:name=".CitiesWeatherHistoryActivity"
             android:theme="@style/Theme.History" />
         <activity
