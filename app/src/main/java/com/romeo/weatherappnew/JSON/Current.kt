@@ -1,19 +1,10 @@
-package com.romeo.weatherappnew.JSON;
+package com.romeo.weatherappnew.JSON
 
-public class Current {
-    private float wind_speed;
-    private float temp;
-    private Weather[] weather;
-
-    public Weather getWeather() {
-        return weather[0];
-    }
-
-    public float getWindSpeed() {
-        return wind_speed;
-    }
-
-    public float getTemp() {
-        return temp;
+class Current {
+    val windSpeed = 0f
+    val temp = 0f
+    private val weather: Array<Weather>? = null
+    fun getWeather(): Weather {
+        return weather!![0]
     }
 }

@@ -1,14 +1,15 @@
-package com.romeo.weatherappnew.JSON;
+package com.romeo.weatherappnew.JSON
 
-public class Day {
-    private Temp temp;
-    private Weather[] weather;
+import kotlin.math.roundToLong
 
-    public long getTemp() {
-        return Math.round(temp.getEve() - 273) ;
+class Day {
+    private val temp: Temp? = null
+    private val weather: Array<Weather>? = null
+    fun getTemp(): Long {
+        return (temp!!.eve - 273).roundToLong()
     }
 
-    public Weather getWeather() {
-        return weather[0];
+    fun getWeather(): Weather {
+        return weather!![0]
     }
 }
